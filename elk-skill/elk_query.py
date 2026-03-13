@@ -63,23 +63,17 @@ def resolve_index_pattern(project, kibana_url, api_key, default):
         return [], default
 
 
-def normalize_field(field):
-    """字段名规范化：traceId → json.traceId，已有前缀则不变"""
-    if "." in field:
-        return field
-    return f"json.{field}"
-
-
 def build_query(query_string, fields, start_time, end_time, max_hits):
     """
     对齐 Kibana 真实请求格式：
-    - query_string / fields 均走 filter + multi_match phrase 或 match_phrase
+    - query_string / fields 的值均走 multi_match phrase 全字段匹配
+    - 兼容不同索引的字段命名差异（如 traceId vs json.traceId）
     - _source: false，通过 fields 返回所有字段
     - 按 @timestamp 倒序
     """
     filter_clauses = []
 
-    # query_string：跨所有字段的短语匹配（与 Kibana Discover 行为一致）
+    # query_string：跨所有字段的短语匹配
     if query_string:
         filter_clauses.append({
             "multi_match": {
@@ -89,12 +83,15 @@ def build_query(query_string, fields, start_time, end_time, max_hits):
             }
         })
 
-    # fields：精确字段短语匹配，字段名自动补 json. 前缀
+    # fields：每个值独立做 multi_match phrase，兼容任意字段命名前缀
     if fields:
-        for field, value in fields.items():
-            es_field = normalize_field(field)
+        for value in fields.values():
             filter_clauses.append({
-                "match_phrase": {es_field: value}
+                "multi_match": {
+                    "type": "phrase",
+                    "query": value,
+                    "lenient": True
+                }
             })
 
     # 时间范围
