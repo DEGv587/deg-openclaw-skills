@@ -1,0 +1,19 @@
+{
+  "skills": {
+    "load": {
+      "extraDirs": [
+        "/absolute/path/to/deg-skills/elk-skill"
+      ],
+      "watch": true
+    },
+    "entries": {
+      "elk-log-query": {
+        "env": {
+          "ELASTICSEARCH_URL": "http://k8selk.dev.test.cn:9200",
+          "KIBANA_URL": "http://k8selk.dev.test.cn",
+          "ELK_API_KEY": "your-api-key-here"
+        }
+      }
+    }
+  }
+}

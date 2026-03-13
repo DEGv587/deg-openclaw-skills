@@ -1,0 +1,4 @@
+{
+  "default_index_pattern": "logs-*",
+  "max_hits": 100
+}
