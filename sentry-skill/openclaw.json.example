@@ -1,0 +1,19 @@
+{
+  "skills": {
+    "load": {
+      "extraDirs": [
+        "/absolute/path/to/deg-skills/sentry-skill"
+      ],
+      "watch": true
+    },
+    "entries": {
+      "sentry-issue-investigation": {
+        "env": {
+          "SENTRY_BASE_URL": "https://sentry.io",
+          "SENTRY_ORG": "your-organization-slug",
+          "SENTRY_AUTH_TOKEN": "your-token-here"
+        }
+      }
+    }
+  }
+}

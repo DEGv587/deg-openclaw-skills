@@ -1,0 +1,9 @@
+{
+  "max_project_matches": 5,
+  "max_issue_candidates": 10,
+  "max_events_per_issue": 5,
+  "default_limit": 3,
+  "max_route_queries": 4,
+  "request_error_breadcrumb_limit": 10,
+  "timeout_seconds": 15
+}
