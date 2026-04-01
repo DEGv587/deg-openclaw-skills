@@ -1,0 +1,28 @@
+{
+  "skills": {
+    "load": {
+      "extraDirs": [
+        "/absolute/path/to/deg-openclaw-skills/bug-locator-skill",
+        "/absolute/path/to/deg-openclaw-skills/sentry-skill",
+        "/absolute/path/to/deg-openclaw-skills/elk-skill"
+      ],
+      "watch": true
+    },
+    "entries": {
+      "sentry-issue-investigation": {
+        "env": {
+          "SENTRY_BASE_URL": "https://sentry.io",
+          "SENTRY_ORG": "your-organization-slug",
+          "SENTRY_AUTH_TOKEN": "your-sentry-token-here"
+        }
+      },
+      "elk-log-query": {
+        "env": {
+          "KIBANA_URL": "http://your-kibana-host",
+          "ELASTICSEARCH_URL": "http://your-elasticsearch-host:9200",
+          "ELK_API_KEY": "your-elk-api-key-here"
+        }
+      }
+    }
+  }
+}

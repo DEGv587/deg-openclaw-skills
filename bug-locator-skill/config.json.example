@@ -1,0 +1,30 @@
+{
+  "repos": [
+    {
+      "name": "your-frontend-project",
+      "type": "frontend",
+      "path": "/absolute/path/to/frontend-repo",
+      "sentry_project": "sentry-frontend-project-slug",
+      "git_remote": "https://gitlab.example.com/org/frontend-repo",
+      "environments": {
+        "production": "main",
+        "staging": "develop"
+      }
+    },
+    {
+      "name": "your-backend-project",
+      "type": "backend",
+      "path": "/absolute/path/to/backend-repo",
+      "sentry_project": "sentry-backend-project-slug",
+      "git_remote": "https://gitlab.example.com/org/backend-repo",
+      "elk_projects": {
+        "production": "prod-service-name",
+        "staging": "staging-service-name"
+      },
+      "environments": {
+        "production": "main",
+        "staging": "develop"
+      }
+    }
+  ]
+}
