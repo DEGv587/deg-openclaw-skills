@@ -1,4 +1,7 @@
 {
+  "kibana_url": "http://k8selk.dev.weiling.cn",
+  "elasticsearch_url": "",
+  "api_key": "",
   "default_index_pattern": "logs-*",
   "max_hits": 100
 }

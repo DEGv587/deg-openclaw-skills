@@ -1,0 +1,47 @@
+{
+  "app_id": "cli_xxxxxxxxxxxxxxxx",
+  "app_secret": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "bitable": {
+    "app_token": "XHgKbAA3ZaOvqqs1Rpsc1PSBnvd",
+    "table_id": "tblxxxxxxxxxxxxxxxx",
+    "poll_interval_minutes": 10,
+    "field_map": {
+      "bug_description": "问题描述",
+      "route":           "页面路由",
+      "project":         "项目名称",
+      "environment":     "环境",
+      "incident_time":   "问题时间",
+      "status":          "状态",
+      "assignee":        "责任人",
+      "commit":          "Commit",
+      "root_cause":      "根因摘要",
+      "fix_suggestion":  "修复建议",
+      "located_at":      "排查时间"
+    },
+    "status_values": {
+      "pending":     "待排查",
+      "in_progress": "排查中",
+      "located":     "已排查待修复",
+      "fixing":      "修复中",
+      "resolved":    "已解决",
+      "reproducing": "待复现",
+      "deferred":    "延期处理",
+      "wont_fix":    "不处理"
+    }
+  },
+  "notify": {
+    "wecom_webhook_url": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx"
+  },
+  "member_map": [
+    {
+      "git_name":       "zhangsan",
+      "git_email":      "zhangsan@company.com",
+      "feishu_user_id": "ou_xxxxxxxxxxxxxxxx"
+    },
+    {
+      "git_name":       "lisi",
+      "git_email":      "lisi@company.com",
+      "feishu_user_id": "ou_yyyyyyyyyyyyyyyy"
+    }
+  ]
+}

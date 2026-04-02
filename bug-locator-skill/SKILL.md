@@ -43,6 +43,34 @@ parameters:
 
 ---
 
+### Step 0.5：飞书同步确认
+
+检查 `config.json` 中是否存在 `feishu` 字段：
+
+**情况 A：`feishu` 字段不存在（首次使用）**
+
+询问用户：
+> "是否开启飞书同步？开启后排查结果将自动写回飞书多维表格，并通过飞书群@责任人。（是/否）"
+
+- 用户选**是**：
+  1. 检查 `feishu-bitable-sync/config.json` 是否存在
+     - 不存在 → 调用 `feishu-bitable-sync`（action: `init_config`）完成配置向导
+     - 存在 → 直接使用
+  2. 将 `feishu.enabled: true` 写入当前 `config.json`
+- 用户选**否**：将 `feishu.enabled: false` 写入当前 `config.json`，继续执行
+
+**情况 B：`feishu.enabled: true`**
+
+检查是否传入了 `record_id` 参数：
+- 有 `record_id`：调用 `feishu-bitable-sync`（action: `update_record`），将状态更新为"排查中"，防止重复处理
+- 无 `record_id`：说明是手动触发的单条排查，跳过飞书状态更新，排查完成后也不回写（仅输出报告）
+
+**情况 C：`feishu.enabled: false`**
+
+跳过，继续执行。
+
+---
+
 ### Step 1：调用 sentry-skill 定位前端证据
 
 调用 `sentry-issue-investigation`，参数映射：
@@ -65,7 +93,8 @@ parameters:
 **情况 B：返回过多候选（candidates > 5）**
 
 用 `problem_description` 和 `route` 对所有候选做二次人工评分：
-- 优先选 title/culprit 与路由最匹配的
+- 优先选 title 与问题描述最匹配的
+- 优先选 `recommended_event.tags.page_path` 或 `tags.url` 与用户 route 最匹配的
 - 优先选时间戳最接近用户描述时间点的
 - 选出最多 3 条继续分析，其余丢弃
 
@@ -78,9 +107,19 @@ parameters:
 
 **情况 D：质量合格**
 
+**首先验证 recommended_event 是否与目标页面匹配：**
+- 检查 `recommended_event.tags.page_path` 或 `tags.url` 是否与用户传入的 `route` 吻合
+- 如果不匹配（同一 issue 有多个 event 来自不同页面），遍历其他 event，选取 `page_path` 最匹配的那条作为分析基础
+- 如果所有 event 的 `page_path` 都不匹配，说明 issue 与当前 bug 可能无关，回到情况 A 重查
+
+**提取报错接口 URL 时注意以下字段含义：**
+- `culprit`：JS 代码的报错位置（文件路径 + 函数名），**不是接口 URL**，不要用于 ELK 查询
+- `tags.errorUrl`：前端拦截器捕获的实际报错接口路径，**优先用于 ELK 查询**
+- `breadcrumbs` 中的 http 类型条目：包含接口 URL 和状态码，作为补充
+
 进入判断逻辑：
 - 若存在 JS 异常（exception type 非 HTTP 相关）且无明显接口报错线索 → **前端报错**，进入 Step 2A
-- 若 `related_request_errors` 或 `error_data_requests` 或 `analysis_hints` 中存在接口请求失败（4xx/5xx、业务错误码）→ **后端接口报错**，进入 Step 2B
+- 若 `tags.errorUrl` 或 `related_request_errors` 或 `error_data_requests` 或 `analysis_hints` 中存在接口请求失败（4xx/5xx、业务错误码）→ **后端接口报错**，进入 Step 2B
 - 若两者都存在，优先按后端接口报错处理，同时保留前端异常作为附加证据
 - 若无明显报错证据 → 进入 Step 2C
 
@@ -253,6 +292,72 @@ parameters:
 
 ---
 
+### Step 3.5：回写飞书（可选）
+
+**仅在以下两个条件同时满足时执行：**
+1. `config.json` 中 `feishu.enabled: true`
+2. 本次排查传入了 `record_id` 参数
+
+#### 3.5.1 更新表格记录
+
+调用 `feishu-bitable-sync`（action: `update_record`），传入：
+
+```json
+{
+  "record_id": "{传入的 record_id}",
+  "fields": {
+    "status":     "located",
+    "assignee":   "{git blame 作者姓名}",
+    "root_cause": "{完整内容：根因描述 + 代码位置（文件:行号）+ 修复建议全部条目，换行分隔，不截断}"
+  }
+}
+```
+
+`root_cause` 字段对应飞书表格「状态补充说明」，写入完整排查结论，格式建议：
+
+```
+【根因】
+{详细根因描述}
+
+【代码位置】
+{repo_path}/{file}:{line}
+
+【修复建议】
+1. {建议一}
+2. {建议二}
+3. {建议三}
+```
+
+若更新失败，在输出中标注"飞书回写失败：{错误信息}"，不影响排查报告本身。
+
+#### 3.5.2 发送企微通知
+
+调用 `feishu-bitable-sync`（action: `send_message`），传入：
+
+- `message`：按以下 markdown 格式组装，根因超过 500 字时截断并末尾加"（详见飞书表格）"：
+
+```
+**[Bug 已初步定位]** {问题描述截断 30 字}
+
+**问题描述：** {bug_description}
+**错误类型：** {前端报错 / 后端接口报错 / 推测}
+
+**根因：**
+{root_cause 前 500 字，超出则截断 + "（详见飞书表格）"}
+
+**责任人：** {git blame 作者姓名}
+**Commit：** [{short_hash}]({commit_url}) — {commit message}
+
+**修复建议：**
+{修复建议第一条}
+```
+
+- `at_user_git_name`：git blame 返回的作者名，脚本通过 member_map 查找 wecom_userid 触发真正的@提醒
+
+若 member_map 中找不到对应人员，消息正常发送但不@。
+
+---
+
 ### 全局注意事项
 
 - **不要在拿到完整证据前给出根因判断**，尤其是 Step 1 结束后不要急于结论
@@ -262,3 +367,5 @@ parameters:
 - **重试上限为 3 次**（Sentry 和 ELK 各自独立计数），超过后降级处理，不要无限循环
 - **config.json 中找不到匹配仓库时**：列出已配置的项目，让用户确认后继续
 - **commit 链接平台判断**：包含 `github.com` 的用 GitHub 格式，其他默认用 GitLab 格式
+- **Sentry culprit ≠ 接口 URL**：`culprit` 是前端 JS 文件中的报错函数位置，真正的报错接口在 `tags.errorUrl` 里；不要用 culprit 去 ELK 查接口日志
+- **同一 issue 多个 event 来自不同页面**：必须先验证 `recommended_event.tags.page_path` 与用户 route 匹配，不匹配时遍历其他 event 选正确的那条

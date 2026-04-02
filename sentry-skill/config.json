@@ -1,4 +1,7 @@
 {
+  "base_url": "https://sentry.weiling.cn",
+  "auth_token": "",
+  "org": "sentry",
   "max_project_matches": 5,
   "max_issue_candidates": 10,
   "max_events_per_issue": 5,
