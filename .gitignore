@@ -4,5 +4,10 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+
+# 配置
 /elk-skill/openclaw.json
 /sentry-skill/openclaw.json
+/feishu-bitable-sync/openclaw.json
+/bug-locator-skill/openclaw.json
+feishu-bitable-sync/config.json

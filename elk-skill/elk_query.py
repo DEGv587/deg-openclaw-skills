@@ -83,16 +83,23 @@ def build_query(query_string, fields, start_time, end_time, max_hits):
             }
         })
 
-    # fields：每个值独立做 multi_match phrase，兼容任意字段命名前缀
+    # fields：低基数的枚举字段（level/method/status 等）用 term + .keyword 精确匹配，避免 phrase 匹配误命中；
+    # 其他字段（traceId、url、业务关键词等）走 multi_match phrase，兼容任意字段命名前缀
+    KEYWORD_FIELDS = {"level", "method", "status", "environment", "region"}
     if fields:
-        for value in fields.values():
-            filter_clauses.append({
-                "multi_match": {
-                    "type": "phrase",
-                    "query": value,
-                    "lenient": True
-                }
-            })
+        for key, value in fields.items():
+            if key in KEYWORD_FIELDS:
+                filter_clauses.append({
+                    "term": {f"{key}.keyword": value}
+                })
+            else:
+                filter_clauses.append({
+                    "multi_match": {
+                        "type": "phrase",
+                        "query": value,
+                        "lenient": True
+                    }
+                })
 
     # 时间范围
     filter_clauses.append({
@@ -158,11 +165,10 @@ def search_via_es(es_url, api_key, index_pattern, search_query):
 
 
 def run():
-    es_url = os.getenv("ELASTICSEARCH_URL", "")
-    kibana_url = os.getenv("KIBANA_URL", "")
-    api_key = os.getenv("ELK_API_KEY", "")
-
     config = load_config()
+    es_url = os.getenv("ELASTICSEARCH_URL", "") or config.get("elasticsearch_url", "")
+    kibana_url = os.getenv("KIBANA_URL", "") or config.get("kibana_url", "")
+    api_key = os.getenv("ELK_API_KEY", "") or config.get("api_key", "")
 
     try:
         args = json.loads(sys.argv[1])

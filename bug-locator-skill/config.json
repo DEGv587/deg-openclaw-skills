@@ -1,0 +1,32 @@
+{
+  "feishu": {
+    "enabled": true
+  },
+  "repos": [
+    {
+      "name": "agentcy-web",
+      "type": "frontend",
+      "path": "/Users/deg/Documents/willing-work/agentcy/agentcy-web",
+      "sentry_project": "agentcy-web",
+      "git_remote": "http://gitlab.dev.weiling.cn/willing-open/agentcy-web",
+      "environments": {
+        "production": "main",
+        "staging": "develop"
+      }
+    },
+    {
+      "name": "willing-agentcy",
+      "type": "backend",
+      "path": "/Users/deg/Documents/willing-work/agentcy/willing-agentcy",
+      "git_remote": "http://gitlab.dev.weiling.cn/willing-backend/willing-agentcy",
+      "elk_projects": {
+        "production": "willing-agentcy-prd*",
+        "staging": "willing-agentcy-int*"
+      },
+      "environments": {
+        "production": "main",
+        "staging": "develop"
+      }
+    }
+  ]
+}

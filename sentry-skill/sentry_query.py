@@ -1269,9 +1269,9 @@ def build_analysis_hints(recommended_event):
 def run():
     config = load_config()
     timeout = config.get("timeout_seconds", 15)
-    base_url = clean_base_url(os.getenv("SENTRY_BASE_URL"))
-    token = os.getenv("SENTRY_AUTH_TOKEN", "")
-    default_org = os.getenv("SENTRY_ORG", "")
+    base_url = clean_base_url(os.getenv("SENTRY_BASE_URL", "") or config.get("base_url"))
+    token = os.getenv("SENTRY_AUTH_TOKEN", "") or config.get("auth_token", "")
+    default_org = os.getenv("SENTRY_ORG", "") or config.get("org", "")
 
     try:
         args = json.loads(sys.argv[1])

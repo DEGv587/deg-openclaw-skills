@@ -1,4 +1,7 @@
 {
+  "feishu": {
+    "enabled": false
+  },
   "repos": [
     {
       "name": "your-frontend-project",
