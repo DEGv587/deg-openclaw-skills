@@ -141,6 +141,8 @@ def resolve_field_name(semantic_key: str, cfg: dict) -> str | None:
 def build_feishu_fields(semantic_fields: dict, cfg: dict) -> dict:
     """将语义键值对转为飞书 API 所需的 {实际字段名: 值} 格式。"""
     field_map: dict = cfg.get("bitable", {}).get("field_map", {})
+    # 日期时间类型字段（type 5），飞书要求传毫秒时间戳
+    datetime_keys = {"incident_time"}
     result = {}
     for key, val in semantic_fields.items():
         if key == "status":
@@ -154,7 +156,22 @@ def build_feishu_fields(semantic_fields: dict, cfg: dict) -> dict:
                 member = lookup_feishu_user(val, cfg)
                 if member:
                     result[actual] = [{"id": member["feishu_user_id"]}]
-                # 找不到则跳过，不写入，避免写入错误格式报错
+        elif key == "reporter":
+            # 人员字段：val 为飞书 user_id，直接构造
+            actual = field_map.get("reporter")
+            if actual and val:
+                result[actual] = [{"id": val}]
+        elif key in datetime_keys:
+            # 日期时间字段：支持毫秒时间戳（int）或 ISO 8601 字符串
+            actual = field_map.get(key)
+            if actual and val:
+                if isinstance(val, int):
+                    result[actual] = val
+                else:
+                    # ISO 8601 → 毫秒时间戳
+                    from datetime import timezone
+                    dt = datetime.fromisoformat(str(val).replace("Z", "+00:00"))
+                    result[actual] = int(dt.astimezone(timezone.utc).timestamp() * 1000)
         else:
             actual = field_map.get(key)
             if actual:
@@ -325,6 +342,25 @@ def cmd_list_pending(cfg: dict):
     print(json.dumps({"records": items}, ensure_ascii=False))
 
 
+def cmd_create_record(cfg: dict, fields: dict):
+    bt = cfg["bitable"]
+    feishu_fields = build_feishu_fields(fields, cfg)
+    if not feishu_fields:
+        print(json.dumps({"error": "没有可映射的字段，请检查 field_map 配置"}))
+        return
+
+    data = feishu_post(
+        f"/bitable/v1/apps/{bt['app_token']}/tables/{bt['table_id']}/records",
+        cfg,
+        {"fields": feishu_fields},
+    )
+    if data.get("code") == 0:
+        record_id = data.get("data", {}).get("record", {}).get("record_id", "")
+        print(json.dumps({"success": True, "record_id": record_id}))
+    else:
+        print(json.dumps({"success": False, "error": data}))
+
+
 def cmd_update_record(cfg: dict, record_id: str, fields: dict):
     bt = cfg["bitable"]
     feishu_fields = build_feishu_fields(fields, cfg)
@@ -440,6 +476,9 @@ def main():
         cmd_resolve_user_by_email(cfg, emails)
     elif args.command == "list_pending":
         cmd_list_pending(cfg)
+    elif args.command == "create_record":
+        fields = json.loads(args.fields)
+        cmd_create_record(cfg, fields)
     elif args.command == "update_record":
         fields = json.loads(args.fields)
         cmd_update_record(cfg, args.record_id, fields)

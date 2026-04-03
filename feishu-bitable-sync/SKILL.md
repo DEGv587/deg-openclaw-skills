@@ -1,6 +1,6 @@
 ---
 name: feishu-bitable-sync
-description: 飞书多维表格同步助手。支持初始化字段映射和人员配置、轮询待排查记录、更新记录字段（状态/责任人/根因等）、发送排查完成通知并@责任人。
+description: 飞书多维表格同步助手。支持初始化字段映射和人员配置、轮询待排查记录、新建记录、更新记录字段（状态/责任人/根因等）、发送排查完成通知并@责任人。
 metadata:
   openclaw:
     requires:
@@ -8,7 +8,7 @@ metadata:
       env: ["FEISHU_APP_ID", "FEISHU_APP_SECRET"]
 parameters:
   - name: action
-    description: "操作类型：init_config / list_pending / update_record / send_message / poll"
+    description: "操作类型：init_config / list_pending / create_record / update_record / send_message / poll"
   - name: record_id
     description: 要更新的记录 ID（update_record 时必填）
   - name: fields
@@ -138,6 +138,41 @@ parameters:
 
 - 若返回空列表，告知用户当前无待排查记录。
 - 将列表传递给 bug-locator-skill 逐条处理。
+
+---
+
+### Action: create_record — 新建记录
+
+调用 `python3 feishu_bitable.py create_record --fields '{fields_json}'`。
+
+`fields` 使用语义键，脚本内部通过 `field_map` 转为实际字段名。支持的语义键：
+
+| 语义键 | 飞书字段 | 类型 | 值说明 |
+|---|---|---|---|
+| `bug_description` | 问题描述 | 文本 | 字符串 |
+| `route` | 路由(url) | 文本 | 页面路由或完整 URL |
+| `incident_time` | 问题发生时间 | 日期时间 | ISO 8601 字符串或毫秒时间戳 |
+| `status` | 状态 | 单选 | 语义键（如 `"pending"`）或实际文本（如 `"待排查"`） |
+| `priority` | 优先级 | 单选 | `"P0"` / `"P1"` / `"P2"` |
+| `source` | 来源 | 单选 | `"测试"` / `"外部"` |
+| `platform` | 端类型 | 单选 | `"Web"` / `"iOS"` / `"Android"` / `"macOS"` / `"Windows"` |
+| `reporter` | 提出人 | 人员 | 飞书 user_id（`ou_` 开头） |
+
+典型写入场景（@openclaw 上报 bug 后直接创建记录）：
+
+```json
+{
+  "bug_description": "kos混剪失败，页面报错",
+  "route": "/matrix/kos",
+  "incident_time": "2026-04-03T14:00:00+08:00",
+  "status": "pending",
+  "priority": "P1",
+  "source": "外部",
+  "platform": "Web"
+}
+```
+
+脚本返回 `{"success": true, "record_id": "recxxxxxxxx"}` 或包含错误信息的对象。返回的 `record_id` 可直接传给 `bug-locator-skill` 触发排查。
 
 ---
 
